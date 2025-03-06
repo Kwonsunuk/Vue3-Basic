@@ -1,281 +1,192 @@
 <template>
-  <!-- 🔹 Vue 컴포넌트 개념 -->
-  <div style="border: solid 1px blue; padding: 10px; margin-bottom: 10px">
-    <p>📌 Vue 컴포넌트 개념</p>
-    <p>Vue 컴포넌트는 독립적인 UI 조각(부품)으로, 여러 곳에서 재사용할 수 있다.</p>
-    <p>파일 확장자는 `.vue`이며, 하나의 `.vue` 파일은 단일 컴포넌트이다.</p>
+  <!--
+      📌 v-show vs v-if 차이점
+      - 특정 요소를 조건에 따라 표시하거나 숨길 때 `v-show` 또는 `v-if`를 사용함.
+      
+      ✅ `v-show`
+      - 요소를 **항상 렌더링**하지만, CSS `display: none`을 사용하여 숨김 처리.
+      - 토글이 자주 발생하는 경우 사용하면 성능상 이점이 있음.
+  
+      ✅ `v-if`
+      - 요소가 **조건을 만족할 때만 렌더링**됨.
+      - 한 번 렌더링된 후 제거되면 다시 렌더링할 때 초기화됨.
+      - 조건이 **자주 변경되지 않는 경우**에 적합.
+    -->
+  <div>
+    <h3>v-show 사용</h3>
+    <div v-show="toggle">true</div>
+    <div v-show="!toggle">false</div>
+    <button @click="onToggle">Toggle</button>
   </div>
 
-  <!-- 
-  - Vue의 컴포넌트 파일은 3개의 주요 섹션으로 구성된다.
-   1. `<template>`: HTML 코드가 들어가며, 화면에 표시될 구조를 정의.
-   2. `<script>`: JavaScript 로직이 들어가며, 데이터 및 동작을 관리.
-   3. `<style>`: CSS 코드가 들어가며, 해당 컴포넌트의 스타일을 정의.
-   {{ }}: Vue의 인터폴레이션 문법으로, 변수를 화면에 출력 
-  -->
+  <div>
+    <h3>v-if 사용</h3>
+    <div v-if="toggle">true</div>
+    <div v-else>false</div>
+    <button @click="onToggle">Toggle</button>
+  </div>
 
-  <!-- 🔹 데이터 바인딩 -->
-  <div style="border: solid 1px red; padding: 10px; margin-bottom: 10px">
-    <p>📌 데이터 바인딩 (Data Binding)</p>
-    <p>Vue에서 데이터와 HTML 요소를 연결하는 것을 "데이터 바인딩"이라고 한다.</p>
+  <div class="container">
+    <h2>To-Do List</h2>
 
-    <!-- ✅ 단방향 바인딩 -->
-    <p><strong>단방향 바인딩 (JS → HTML만 가능, 입력값 변경 불가)</strong></p>
-    <div>{{ name }}</div>
-    <input type="text" v-bind:value="name" />
+    <!--
+        📌 Form을 사용한 입력 필드
+        - `v-on:submit.prevent`를 사용하여 기본 폼 제출 시 페이지 새로고침을 방지함.
+        - 주요 이벤트 수정자(Event Modifiers):
+          - `.stop` → 이벤트 전파 중단 (`event.stopPropagation()`)
+          - `.prevent` → 기본 동작 방지 (`event.preventDefault()`)
+          - `.capture` → 캡처링 단계에서 이벤트 실행
+          - `.self` → 이벤트가 해당 요소에서 발생한 경우에만 실행
+          - `.once` → 한 번만 실행
+          - `.passive` → `event.preventDefault()`를 호출하지 않음
+      -->
+    <form @submit.prevent="onSubmit">
+      <div class="d-flex">
+        <div class="flex-grow-1 mr-2">
+          <input class="form-control" type="text" v-model="todo" placeholder="Type new to-do" />
+        </div>
+        <div>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </div>
+      </div>
+      <!-- 📌 입력값이 비어 있을 경우 에러 메시지 표시 -->
+      <div v-show="hasError" class="error-message">This field cannot be empty</div>
+    </form>
 
-    <!-- ✅ 양방향 바인딩 -->
-    <p><strong>양방향 바인딩 (JS ↔ HTML, 입력하면 데이터도 변경됨)</strong></p>
-    <input type="text" v-model="name" />
+    <!-- 📌 할 일 목록이 없을 때 메시지 표시 -->
+    <div v-if="!todos.length">추가된 Todo가 없습니다.</div>
 
-    <hr />
+    <!--
+        📌 v-for를 사용하여 목록을 동적으로 렌더링
+        - 같은 요소를 반복해서 출력할 때 `v-for`을 사용함.
+        - `:key` 속성을 사용하여 각 항목을 구별해야 함.
+  
+        ✅ `:key`를 설정하는 이유
+        - Vue는 `key`를 기반으로 DOM을 효율적으로 업데이트함.
+        - 고유한 `id`를 사용하면 불필요한 DOM 재렌더링을 방지하고 성능을 최적화할 수 있음.
+      -->
+    <div class="card mt-2" v-for="(todo, index) in todos" :key="todo.id">
+      <div class="card-body p-2 d-flex align-items-center">
+        <div class="form-check flex-grow-1">
+          <!-- 📌 v-model을 사용하여 `todo.completed` 값 변경 -->
+          <input class="form-check-input" type="checkbox" v-model="todo.completed" />
 
-    <!-- 🔹 단방향 바인딩(`v-bind`)을 이용한 양방향 바인딩 구현 -->
-    <div>
-      <label for="name">Name (v-bind + @input)</label>
-      <input type="text" id="name" v-bind:value="name1" @input="updateName1" />
-      <button class="btn btn-primary" @click="onSubmit1">Click</button>
+          <!--
+              ✅ 스타일 바인딩 (`v-bind:style`)
+              - `todo.completed`가 `true`일 경우, `todoStyle` 적용
+              - 인라인 스타일을 동적으로 변경해야 할 때 유용
+            <label class="form-check-label" :style="todo.completed ? todoStyle : {}">
+              {{ todo.subject }}
+            </label>
+            -->
+
+          <!--
+              ✅ 클래스 바인딩 (`v-bind:class`)
+              - `todo.completed`가 `true`일 경우, `todo` 클래스 추가
+              - CSS 클래스를 동적으로 변경할 때 유용
+            -->
+          <label class="form-check-label" :class="{ todo: todo.completed }">
+            {{ todo.subject }}
+          </label>
+        </div>
+        <div>
+          <button class="btn btn-danger btn-sm" @click="deleteTodo(index)">Delete</button>
+        </div>
+      </div>
     </div>
-
-    <!-- 🔹 v-model을 이용한 양방향 바인딩 구현 -->
-    <div>
-      <label for="name1">Name (v-model)</label>
-      <input type="text" id="name1" v-model="name2" />
-      <button class="btn btn-primary" @click="onSubmit2">Click</button>
-    </div>
-
-    <hr />
-
-    <!-- ✅ 속성 바인딩 예제 -->
-    <p><strong>입력 필드 속성 바인딩</strong></p>
-
-    <!-- 🔹 type 속성 바인딩 -->
-    <label>입력 타입 변경:</label>
-    <select v-model="inputType">
-      <option value="text">Text</option>
-      <option value="password">Password</option>
-      <option value="email">Email</option>
-      <option value="number">Number</option>
-    </select>
-
-    <p><strong>동적으로 변경되는 입력 필드</strong></p>
-    <input :type="inputType" v-model="dynamicValue" placeholder="타입이 변경됨" />
-
-    <p>현재 입력된 값: {{ dynamicValue }}</p>
-
-    <hr />
-
-    <!-- 🔹 기타 속성 바인딩 -->
-    <p><strong>기타 속성 바인딩 예제</strong></p>
-    <input type="text" :placeholder="placeholderText" />
-    <br />
-    <label><input type="checkbox" v-model="isDisabled" /> 입력 비활성화</label>
-    <br />
-    <input type="text" :disabled="isDisabled" />
-  </div>
-
-  <!-- 🔹 ref vs reactive 차이
-
-    📌 반응형 변수 (Reactive State)
-    ref()를 사용하면 해당 값이 반응형(Reactive)이 되어 변경 시 자동으로 UI가 업데이트된다.
-    즉, ref()를 사용한 변수의 값이 변경되면 Vue가 이를 감지하고 화면을 자동으로 다시 렌더링한다.
-
-     ✅ ref()는 숫자, 문자열, 객체, 배열 등 다양한 값을 저장할 수 있다.
-    let count = ref(0);  // 숫자 가능
-    let message = ref("Hello, Vue!");  // 문자열 가능
-    let user = ref({ name: "Ugi", age: 25 });  // 객체 가능
-    let items = ref([1, 2, 3, 4]);  // 배열 가능
-
-    오브젝트나 배열과 같은 건 ref 대신 reactive를 사용......?
-
-    ref는 숫자, 문자열, 객체, 배열이 가능하지만 reactive는 객체, 배열만 가능하다.
-    또 다른 차이점은 접근 방식에 있다 ref의 경우 .value로 값에 접근하지만 reactive는
-    .value가 필요 없다.
-    
-    ✅ ref()
-    import { ref } from 'vue';
-
-    export default {
-      setup() {
-        let user = ref({ name: "Ugi", age: 25 });
-
-        const updateName = () => {
-          user.value.name = "New Ugi";  // 반드시 .value 사용
-        };
-
-        return { user, updateName };
-      }
-    };
-    ✔ 객체 전체를 ref()로 감싸면 .value로 접근해야 함.
-    ✔ user.value.name = "New Ugi"; 처럼 내부 속성을 변경할 때도 .value가 필요함.
-
-    ✅ reactive()
-    import { reactive } from 'vue';
-
-    export default {
-      setup() {
-        let user = reactive({ name: "Ugi", age: 25 });
-
-        const updateName = () => {
-          user.name = "New Ugi";  // .value 필요 없음!
-        };
-
-        return { user, updateName };
-      }
-    };
-    ✔ 객체 내부 속성만 변경하는 경우 reactive()가 더 편리함.
-    ✔ user.name = "New Ugi"; 처럼 .value 없이 속성을 직접 수정 가능.   
-
-    🚀 결론
-    단순 데이터(number, string)는 ref() 사용
-    객체나 배열은 reactive()가 더 편리함
-    객체 전체를 ref()로 감쌀 수도 있지만, .value가 필요하여 번거로울 수 있음
-    즉, reactive()는 객체 내부 속성을 자주 변경하는 경우 적합하고,
-    ref()는 값을 교체하는 경우나 단순 데이터 저장에 적합하다. 🚀
-  -->
-
-  <div style="border: solid 1px green; padding: 10px; margin-bottom: 10px">
-    <p>📌 ref vs reactive</p>
-    <p>객체나 배열을 다룰 때, `ref`와 `reactive`의 차이를 확인해보자.</p>
-
-    <p><strong>ref() (객체를 감싸서 반응형으로 만들기)</strong></p>
-    <p>{{ userRef }}</p>
-    <button v-on:click="updateUserRef">Update User (ref)</button>
-
-    <p><strong>reactive() (객체 내부 속성 변경하기)</strong></p>
-    <p>{{ userReactive }}</p>
-    <button @click="updateUserReactive">Update User (reactive)</button>
-  </div>
-
-  <!-- 🔹 이벤트 핸들러 -->
-  <!-- 이벤트 핸들러: v-on:click="함수명" (축약형 @click 가능) -->
-  <div style="border: solid 1px orange; padding: 10px; margin-bottom: 10px">
-    <p>📌 이벤트 핸들러 (Event Handling)</p>
-    <p>버튼을 클릭하면 콘솔에 메시지가 출력된다.</p>
-
-    <button class="btn btn-primary" @click="consoleLog">Print console</button>
-
-    <button class="btn btn-primary" @click="updateName">Update Name</button>
-
-    <p>
-      현재 이름: <strong>{{ name }}</strong>
-    </p>
   </div>
 </template>
 
 <script>
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 
 export default {
   setup() {
-    // 📌 반응형 변수 (ref 사용)
-    const name = ref('Ugi');
-    const name1 = ref('ugi');
-    const name2 = ref('ugi');
-    const userRef = ref({ name: 'Ugi', age: 25 }); // ref 사용
-    const userReactive = reactive({ name: 'Ugi', age: 25 }); // reactive 사용
-    const inputType = ref('text'); // 입력 필드 타입 (text, password, email, number)
-    const dynamicValue = ref(''); // 입력 필드 값
-    const placeholderText = ref('여기에 입력하세요'); // placeholder 속성 바인딩
-    const isDisabled = ref(false); // 입력 필드 활성/비활성 바인딩
+    // 📌 v-show / v-if 비교를 위한 토글 상태
+    const toggle = ref(false);
 
-    // 📌 함수 선언
-    const greeting = () => {
-      return 'Hello';
+    // 📌 입력 필드 에러 상태 (입력값이 비어 있을 경우 true)
+    const hasError = ref(false);
+
+    // 📌 새로운 할 일 입력 값 (문자열)
+    const todo = ref('');
+
+    // 📌 완료된 할 일 스타일 (인라인 스타일 적용용)
+    const todoStyle = {
+      textDecoration: 'line-through',
+      color: 'gray',
     };
 
-    const greeting1 = (getName, age) => {
-      return `Hello, ${getName} (${age})`;
-    };
+    // 📌 할 일 목록 (배열)
+    const todos = ref([]);
 
-    const greet = greeting1(name.value, 1);
-
-    // 📌 ref 객체의 값 변경 (.value 필요)
-    const updateUserRef = () => {
-      userRef.value.name = 'Updated Ugi'; // 반드시 .value 사용
-    };
-
-    // 📌 reactive 객체의 값 변경 (.value 필요 없음)
-    const updateUserReactive = () => {
-      userReactive.name = 'Updated Ugi'; // .value 없이 접근 가능
-    };
-
-    // 📌 이벤트 핸들러
-    const consoleLog = () => {
-      console.log('Hello World!');
-    };
-
-    const updateName = () => {
-      name.value = 'Ugi Coder';
+    /**
+     * @description `v-show` / `v-if` 상태 토글 함수
+     * @details 버튼 클릭 시 `toggle` 값을 반전시켜 화면에서 요소 표시 여부 변경
+     */
+    const onToggle = () => {
+      toggle.value = !toggle.value;
     };
 
     /**
-     * @description 단방향 바인딩(`v-bind`) + @input 이벤트를 활용한 값 업데이트
-     * @param {Event} e - 입력 이벤트 객체
+     * @description 새로운 할 일을 추가하는 함수
+     * @details
+     * - `v-on:submit.prevent`를 사용하여 기본 폼 제출 동작(새로고침) 방지
+     * - 입력값이 비어 있으면 에러 메시지를 표시하고 추가하지 않음
+     * - 입력값이 존재하면 `todos` 배열에 새로운 항목 추가 (ID는 `Date.now()` 사용)
+     * - 추가 후 입력 필드를 초기화하여 사용자 경험 향상
      */
-    const updateName1 = (e) => {
-      console.log(e.target.value);
-      name1.value = e.target.value;
+    const onSubmit = () => {
+      if (!todo.value.trim()) {
+        hasError.value = true;
+      } else {
+        hasError.value = false;
+        todos.value.push({
+          id: Date.now(), // 유니크한 ID 값 생성
+          subject: todo.value.trim(), // 입력된 값 저장
+          completed: false, // 체크박스 선택 여부 (기본값: 미완료)
+        });
+        console.log(todos.value);
+
+        // 📌 입력 필드 초기화 (추가 후 비우기)
+        todo.value = '';
+      }
     };
 
     /**
-     * @description 단방향 바인딩(`v-bind`)을 이용한 값 출력
+     * @description 할 일 목록에서 특정 항목 삭제
+     * @details
+     * - `index`를 사용하여 `todos` 배열에서 해당 항목을 제거
+     * - `splice()`를 사용하여 배열에서 해당 인덱스 항목을 삭제
      */
-    const onSubmit1 = () => {
-      console.log(name1.value);
-    };
-
-    /**
-     * @description `v-model`을 활용한 값 출력
-     */
-    const onSubmit2 = () => {
-      console.log(name2.value);
+    const deleteTodo = (index) => {
+      todos.value.splice(index, 1);
     };
 
     return {
-      name,
-      name1,
-      name2,
-      greet,
-      greeting,
-      greeting1,
-      consoleLog,
-      updateName,
-      updateName1,
-      onSubmit1,
-      onSubmit2,
-      userRef,
-      userReactive,
-      updateUserRef,
-      updateUserReactive,
-      inputType,
-      dynamicValue,
-      placeholderText,
-      isDisabled,
+      toggle,
+      hasError,
+      todo,
+      todoStyle,
+      todos,
+      onToggle,
+      onSubmit,
+      deleteTodo,
     };
   },
 };
 </script>
 
 <style>
-/* 📌 CSS 스타일 정의 */
-p {
-  margin: 5px 0;
+/* 📌 체크박스가 선택된 경우 적용될 스타일 */
+.todo {
+  color: gray;
+  text-decoration: line-through;
 }
 
-button {
-  margin: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
+.error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 4px;
 }
 </style>
