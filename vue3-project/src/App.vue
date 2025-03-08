@@ -53,6 +53,7 @@
       - 부모 컴포넌트의 `addTodo` 함수가 호출되며, `todos` 배열에 새로운 데이터가 추가됨.
     -->
     <TodoSimpleForm @add-todo="addTodo" />
+    <div style="color: red">{{ error }}</div>
 
     <!-- 📌 할 일 목록이 없을 때 메시지 표시 -->
     <div v-if="!filteredTodos.length">There is nothing to display.</div>
@@ -68,6 +69,7 @@
 
 <script>
 import { ref, computed } from 'vue';
+import axios from 'axios';
 import TodoSimpleForm from './components/TodoSimpleForm.vue';
 import TodoList from './components/TodoList.vue';
 
@@ -83,6 +85,9 @@ export default {
     // 📌 할 일 목록 (배열)
     const todos = ref([]);
 
+    //
+    const error = ref('');
+
     /**
      * @description `v-show` / `v-if` 상태 토글 함수
      * @details 버튼 클릭 시 `toggle` 값을 반전시켜 화면에서 요소 표시 여부 변경
@@ -92,38 +97,131 @@ export default {
     };
 
     /**
-     * @description 완료 상태 토글 함수
-     * @details 특정 할 일의 완료 여부를 반전시킴.
+     * @description 특정 할 일의 완료 여부를 토글하는 함수
+     * @details
+     * - HTTP `PATCH` 요청을 통해 `completed` 상태를 업데이트.
+     * - 성공적으로 반영되면 `todos` 배열에서 해당 상태 변경.
      */
-    const toggleTodo = (index) => {
-      todos.value[index].completed = !todos.value[index].completed;
+    const toggleTodo = async (index) => {
+      error.value = '';
+      const { id } = todos.value[index]; // 이렇게 해야 id를 올바르게 가져옴
+      console.log(id);
+      try {
+        await axios.patch(`http://localhost:3000/todos/${id}`, {
+          completed: !todos.value[index].completed,
+        });
+        todos.value[index].completed = !todos.value[index].completed;
+      } catch (err) {
+        error.value = 'Something went wrong.';
+        console.log(err);
+      }
     };
 
     const searchText = ref('');
+    // 📌 검색어 필터링 (computed)
     const filteredTodos = computed(() => {
       if (searchText.value) {
-        return todos.value.filter((todo) => {
-          return todo.subject.includes(searchText.value);
-        });
+        return todos.value.filter((todo) => todo.subject.includes(searchText.value));
       }
       return todos.value;
     });
 
     /**
-     * @description 새로운 할 일을 추가하는 함수
-     * @details
+     * @description 새로운 할 일을 추가하는 함수 (비동기 요청)
+     * @details JSON Server (`db.json`)을 이용한 비동기 API 요청.
      * - `TodoSimpleForm.vue`에서 `context.emit('add-todo', 데이터)` 실행 시 호출됨.
+     * - REST API를 사용하여 json-server(DB)로 데이터를 저장.
+     * - `axios.post()`를 이용해 POST 요청을 보내고, 성공 시 응답 데이터를 `todos` 배열에 추가.
+     * - `try-catch`를 사용하여 에러를 핸들링.
      */
-    const addTodo = (todo) => {
-      todos.value.push(todo);
+    const addTodo = async (todo) => {
+      /**
+       * 📌 비동기 요청 (Axios 사용)
+       * - JSON Server (`db.json`)에 새로운 할 일 저장 요청.
+       * - HTTP `POST` 요청을 사용하여 새로운 데이터를 DB에 추가.
+       * - 요청을 보낼 때 `axios.post()`를 사용하며, 이는 비동기적으로 동작함.
+       * - 서버에서 응답을 받을 때까지 코드 실행을 멈추고 기다리려면 `await`을 사용해야 함.
+       * - 요청이 완료되면 `res.data`에 응답 데이터가 저장됨.
+       */
+      error.value = ''; // 기존 에러 초기화
+      try {
+        const res = await axios.post('http://localhost:3000/todos', {
+          subject: todo.subject, // 할 일 제목
+          completed: todo.completed, // 완료 여부 (기본값: false)
+        });
+
+        // 요청이 성공적으로 완료되면, 응답 데이터를 todos 배열에 추가
+        todos.value.push(res.data);
+      } catch (err) {
+        // 요청이 실패하면 에러 로그를 출력하고 사용자에게 에러 메시지 표시
+        console.log(err);
+        error.value = 'Something went wrong.';
+      }
+
+      /**
+       * 📌 `.then()` vs `async/await` 차이점
+       *
+       * ✅ `.then()` 방식 (Promise Chaining)
+       * - `axios.post()` 요청이 성공하면 `.then(res => { ... })` 블록이 실행됨.
+       * - 실패하면 `.catch(err => { ... })` 블록이 실행됨.
+       * - 하지만 `.then().then().catch()` 같은 형태로 중첩될 경우 **콜백 지옥**이 발생할 수 있음.
+       *
+       * ✅ `async/await` 방식
+       * - `await` 키워드를 사용하여 응답이 올 때까지 기다림.
+       * - `try-catch`를 이용한 예외 처리가 가능하여 가독성이 좋음.
+       * - 동기적인 코드 흐름처럼 보이기 때문에 **가독성이 향상**됨.
+       *
+       * 📌 `.then()` 방식 예제:
+       * axios.post('http://localhost:3000/todos', { subject: todo.subject, completed: todo.completed })
+       *   .then((res) => {
+       *     error.value = '';
+       *     todos.value.push(res.data);
+       *   })
+       *   .catch((err) => {
+       *     console.log(err);
+       *     error.value = 'Something went wrong.';
+       *   });
+       *
+       * ✅ `async/await` 방식이 `.then()` 방식보다 가독성이 뛰어나므로 async/await을 사용함.
+       */
     };
+
+    /**
+     * @description 할 일 목록을 서버에서 가져오는 함수
+     * @details Axios `GET` 요청을 통해 할 일 목록을 불러옴.
+     */
+    const getTodos = async () => {
+      try {
+        const res = await axios.get('http://localhost:3000/todos');
+        todos.value = res.data;
+        error.value = '';
+        console.log(res.data);
+      } catch (err) {
+        console.log(err);
+        error.value = 'Something went wrong.';
+      }
+    };
+
+    // 📌 컴포넌트가 마운트될 때 할 일 목록 가져오기
+    getTodos();
 
     /**
      * @description 할 일 목록에서 특정 항목 삭제
      * @details `index`를 사용하여 `todos` 배열에서 해당 항목을 제거.
+     * - `axios.delete()`를 이용해 해당 ID의 데이터를 서버에서 삭제.
+     * - 성공적으로 삭제되면 `todos` 배열에서도 제거.
      */
-    const deleteTodo = (index) => {
-      todos.value.splice(index, 1);
+    const deleteTodo = async (index) => {
+      try {
+        const { id } = todos.value[index];
+        console.log(id);
+        await axios.delete(`http://localhost:3000/todos/${id}`);
+        todos.value.splice(index, 1);
+        error.value = '';
+      } catch (err) {
+        console.log(err);
+        error.value = 'Something went wrong.';
+      }
     };
 
     // 📌 숫자 값 (count)
@@ -138,11 +236,13 @@ export default {
     return {
       toggle,
       todos,
+      error,
       onToggle,
       toggleTodo,
       searchText,
       filteredTodos,
       addTodo,
+      getTodos,
       deleteTodo,
       count,
       doubleCountComputed,
