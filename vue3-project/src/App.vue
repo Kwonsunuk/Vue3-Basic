@@ -1,33 +1,5 @@
 <template>
   <div class="d-flex align-items-center justify-content-center">
-    <div class="d-flex">
-      <!--
-      📌 v-show vs v-if 차이점
-      - 특정 요소를 조건에 따라 표시하거나 숨길 때 `v-show` 또는 `v-if`를 사용함.
-      
-      ✅ `v-show`
-      - 요소를 **항상 렌더링**하지만, CSS `display: none`을 사용하여 숨김 처리.
-      - 토글이 자주 발생하는 경우 사용하면 성능상 이점이 있음.
-  
-      ✅ `v-if`
-      - 요소가 **조건을 만족할 때만 렌더링**됨.
-      - 한 번 렌더링된 후 제거되면 다시 렌더링할 때 초기화됨.
-      - 조건이 **자주 변경되지 않는 경우**에 적합.
-    -->
-      <div>
-        <h3>v-show 사용</h3>
-        <div v-show="toggle">true</div>
-        <div v-show="!toggle">false</div>
-        <button @click="onToggle">Toggle</button>
-      </div>
-
-      <div>
-        <h3>v-if 사용</h3>
-        <div v-if="toggle">true</div>
-        <div v-else>false</div>
-        <button @click="onToggle">Toggle</button>
-      </div>
-    </div>
     <div>
       <!--
       📌 computed와 method 차이점
@@ -45,7 +17,18 @@
   <div class="container">
     <h2>To-Do List</h2>
 
-    <input class="form-control" type="text" v-model="searchText" placeholder="Search" />
+    <!--
+      📌 검색 입력 필드
+      - `v-model`을 사용하여 `searchText` 상태와 바인딩.
+      - `@keyup.enter`를 이용해 사용자가 Enter 키를 입력하면 `searchTodo()` 실행.
+    -->
+    <input
+      class="form-control"
+      type="text"
+      v-model="searchText"
+      placeholder="Search"
+      @keyup.enter="searchTodo"
+    />
     <hr />
     <!-- 
       📌 자식 컴포넌트에서 부모 컴포넌트로 데이터 전달
@@ -56,19 +39,46 @@
     <div style="color: red">{{ error }}</div>
 
     <!-- 📌 할 일 목록이 없을 때 메시지 표시 -->
-    <div v-if="!filteredTodos.length">There is nothing to display.</div>
+    <div v-if="!todos.length">There is nothing to display.</div>
 
     <!-- 
       📌 부모 컴포넌트에서 자식 컴포넌트로 데이터 전달
       - `todos` 배열을 `TodoList`에 전달하여 리스트 출력.
       - 자식에서 `toggle-todo` 또는 `delete-todo` 이벤트 발생 시, 부모에서 이를 처리함.
     -->
-    <TodoList :todos="filteredTodos" @toggle-todo="toggleTodo" @delete-todo="deleteTodo" />
+    <TodoList :todos="todos" @toggle-todo="toggleTodo" @delete-todo="deleteTodo" />
+
+    <!--
+      📌 페이지네이션 UI
+      - 현재 페이지(`currentPage`)가 1이 아니면 "Previous" 버튼 활성화.
+      - `v-for`를 사용하여 페이지 번호를 동적으로 생성.
+      - 현재 페이지와 일치하는 페이지 번호에 `active` 클래스 적용.
+    -->
+    <nav aria-label="Page navigation example">
+      <ul class="pagination">
+        <li v-if="currentPage !== 1" class="page-item">
+          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage - 1)">
+            Previous
+          </a>
+        </li>
+        <li
+          v-for="page in numberOfPages"
+          :key="page"
+          class="page-item"
+          :class="currentPage === page ? 'active' : ''"
+        >
+          <a style="cursor: pointer" class="page-link" @click="getTodos(page)">{{ page }}</a>
+        </li>
+        <li v-if="numberOfPages !== currentPage" class="page-item">
+          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage + 1)">Next</a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import TodoSimpleForm from './components/TodoSimpleForm.vue';
 import TodoList from './components/TodoList.vue';
@@ -79,22 +89,17 @@ export default {
     TodoList,
   },
   setup() {
-    // 📌 v-show / v-if 비교를 위한 토글 상태
-    const toggle = ref(false);
-
     // 📌 할 일 목록 (배열)
     const todos = ref([]);
 
-    //
     const error = ref('');
 
-    /**
-     * @description `v-show` / `v-if` 상태 토글 함수
-     * @details 버튼 클릭 시 `toggle` 값을 반전시켜 화면에서 요소 표시 여부 변경
-     */
-    const onToggle = () => {
-      toggle.value = !toggle.value;
-    };
+    // 📌 페이지네이션 관련 상태
+    const numberOfTodos = ref(0);
+    const limit = 5;
+    const currentPage = ref(1);
+
+    const searchText = ref('');
 
     /**
      * @description 특정 할 일의 완료 여부를 토글하는 함수
@@ -117,14 +122,27 @@ export default {
       }
     };
 
-    const searchText = ref('');
-    // 📌 검색어 필터링 (computed)
-    const filteredTodos = computed(() => {
-      if (searchText.value) {
-        return todos.value.filter((todo) => todo.subject.includes(searchText.value));
+    /**
+     * @description 할 일 목록을 서버에서 가져오는 함수
+     * @details
+     * - Axios `GET` 요청을 통해 `todos` 데이터를 가져옴.
+     * - `x-total-count`를 사용해 전체 할 일 개수를 계산하여 페이지네이션 적용.
+     */
+    const getTodos = async (page = currentPage.value) => {
+      currentPage.value = page;
+      try {
+        const res = await axios.get(
+          `http://localhost:3000/todos?_sort=id&_order=desc&subject_like=${searchText.value}&_page=${page}&_limit=${limit}`
+        );
+
+        // x-total-count 값 가져오기
+        numberOfTodos.value = parseInt(res.headers['x-total-count'] || 0, 10);
+        todos.value = res.data;
+      } catch (err) {
+        console.error('Error:', err);
+        error.value = 'Something went wrong.';
       }
-      return todos.value;
-    });
+    };
 
     /**
      * @description 새로운 할 일을 추가하는 함수 (비동기 요청)
@@ -149,6 +167,7 @@ export default {
           subject: todo.subject, // 할 일 제목
           completed: todo.completed, // 완료 여부 (기본값: false)
         });
+        getTodos(1);
 
         // 요청이 성공적으로 완료되면, 응답 데이터를 todos 배열에 추가
         todos.value.push(res.data);
@@ -187,19 +206,25 @@ export default {
     };
 
     /**
-     * @description 할 일 목록을 서버에서 가져오는 함수
-     * @details Axios `GET` 요청을 통해 할 일 목록을 불러옴.
+     * @description 검색 필터링 및 즉시 검색 기능
+     * - `watch()`를 사용하여 `searchText`의 변화 감지.
+     * - `setTimeout`을 사용하여 불필요한 요청을 줄이고, 일정 시간 입력 후 검색 수행.
      */
-    const getTodos = async () => {
-      try {
-        const res = await axios.get('http://localhost:3000/todos');
-        todos.value = res.data;
-        error.value = '';
-        console.log(res.data);
-      } catch (err) {
-        console.log(err);
-        error.value = 'Something went wrong.';
-      }
+    let timeout = null;
+    watch(searchText, () => {
+      // setTimeout을 적용하지 않으면 new를 검색할 때 n을 검색하고 ne를 검색하고 new를 검색하기 쓸데없이 자원이 낭비된다.
+      // 하지만 setTimeout을 입력해도 각 각 2초 씩 걸리고 검색하기에 timeout을 이용한다.
+      // 하지만 그래도 오래걸리는 거 같다 그러면 keyup이벤트를 이용해 엔터 이벤트를 적용한다.
+
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        getTodos(1);
+      }, 2000);
+    });
+
+    const searchTodo = () => {
+      clearTimeout(timeout);
+      getTodos(1);
     };
 
     // 📌 컴포넌트가 마운트될 때 할 일 목록 가져오기
@@ -218,11 +243,16 @@ export default {
         await axios.delete(`http://localhost:3000/todos/${id}`);
         todos.value.splice(index, 1);
         error.value = '';
+        getTodos(1);
       } catch (err) {
         console.log(err);
         error.value = 'Something went wrong.';
       }
     };
+
+    const numberOfPages = computed(() => {
+      return Math.ceil(numberOfTodos.value / limit);
+    });
 
     // 📌 숫자 값 (count)
     const count = ref(1);
@@ -234,19 +264,21 @@ export default {
     const doubleCountMethod = () => count.value * 2;
 
     return {
-      toggle,
       todos,
       error,
-      onToggle,
+      numberOfTodos,
+      limit,
+      currentPage,
       toggleTodo,
       searchText,
-      filteredTodos,
       addTodo,
       getTodos,
+      searchTodo,
       deleteTodo,
       count,
       doubleCountComputed,
       doubleCountMethod,
+      numberOfPages,
     };
   },
 };
