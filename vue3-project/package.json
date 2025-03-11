@@ -11,8 +11,10 @@
     "axios": "^1.8.2",
     "core-js": "^3.8.3",
     "glob": "^11.0.1",
+    "lodash": "^4.17.21",
     "rimraf": "^6.0.1",
     "vue": "^3.2.13",
+    "vue-router": "^4.5.0",
     "webpack-chain": "^6.5.1"
   },
   "devDependencies": {
@@ -25,6 +27,7 @@
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.1",
+    "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.3",
     "eslint-plugin-vue": "^9.33.0",
