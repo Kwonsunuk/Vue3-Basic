@@ -20,4 +20,14 @@ module.exports = {
     'no-console': 'warn', // console.log 사용 시 경고
     'vue/multi-word-component-names': 'off', // Vue 파일명 규칙 완화
   },
+  settings: {
+    'import/resolver': {
+      alias: {
+        map: [
+          ['@', './src'], // '@'을 'src' 폴더로 인식하도록 설정
+        ],
+        extensions: ['.js', '.vue'], // .vue 파일도 인식하도록 확장자 추가
+      },
+    },
+  },
 };
