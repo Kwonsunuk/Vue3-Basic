@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from '../pages/index.vue';
 import Todos from '../pages/todos/index.vue';
 import Todo from '../pages/todos/_id.vue';
+import TodoCreate from '../pages/todos/create/index.vue';
 
 /**
  * 📌 `createWebHistory()`
@@ -49,6 +50,11 @@ const router = createRouter({
       path: '/todos', // "/todos" 페이지
       name: 'Todos',
       component: Todos,
+    },
+    {
+      path: '/todos/create', // "/todo 생성 페이지
+      name: 'TodoCreate',
+      component: TodoCreate,
     },
     {
       path: '/todos/:id', // "/todos/id" 페이지
