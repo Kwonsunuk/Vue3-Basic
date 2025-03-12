@@ -1,7 +1,9 @@
 <template>
   <div>
-    <h2>To-Do List</h2>
-
+    <div class="d-flex justify-content-between mb-3">
+      <h2>To-Do List</h2>
+      <button class="btn btn-primary" @click="moveToCreatePage">Create Todo</button>
+    </div>
     <!--
       📌 검색 입력 필드
       - `v-model`을 사용하여 `searchText` 상태와 바인딩.
@@ -20,8 +22,6 @@
       - `TodoSimpleForm` 컴포넌트의 `onSubmit` 함수에서 `context.emit('add-todo', 데이터)` 실행 시
       - 부모 컴포넌트의 `addTodo` 함수가 호출되며, `todos` 배열에 새로운 데이터가 추가됨.
     -->
-    <TodoSimpleForm @add-todo="addTodo" />
-    <div style="color: red">{{ error }}</div>
 
     <!-- 📌 할 일 목록이 없을 때 메시지 표시 -->
     <div v-if="!todos.length">There is nothing to display.</div>
@@ -60,18 +60,21 @@
       </ul>
     </nav>
   </div>
+  <Toast v-if="showToast" :message="toastMessage" v-bind:type="toastAlertType" />
 </template>
 
 <script>
 import { ref, computed, watch } from 'vue';
 import axios from 'axios';
-import TodoSimpleForm from '@/components/TodoSimpleForm.vue';
 import TodoList from '@/components/TodoList.vue';
+import Toast from '@/components/Toast.vue';
+import useToast from '@/composables/toast';
+import { useRouter } from 'vue-router';
 
 export default {
   components: {
-    TodoSimpleForm,
     TodoList,
+    Toast,
   },
   setup() {
     // 📌 할 일 목록 (배열)
@@ -85,6 +88,14 @@ export default {
     const currentPage = ref(1);
 
     const searchText = ref('');
+    const { toastMessage, toastAlertType, showToast, triggerToast } = useToast();
+    const router = useRouter();
+
+    const moveToCreatePage = () => {
+      router.push({
+        name: 'TodoCreate',
+      });
+    };
 
     /**
      * @description 특정 할 일의 완료 여부를 토글하는 함수
@@ -127,6 +138,7 @@ export default {
       } catch (err) {
         console.error('Error:', err);
         error.value = 'Something went wrong.';
+        triggerToast('Something went wrong!', 'danger');
       }
     };
 
@@ -161,6 +173,7 @@ export default {
         // 요청이 실패하면 에러 로그를 출력하고 사용자에게 에러 메시지 표시
         console.log(err);
         error.value = 'Something went wrong.';
+        triggerToast('Something went wrong!', 'danger');
       }
 
       /**
@@ -233,21 +246,13 @@ export default {
       } catch (err) {
         console.log(err);
         error.value = 'Something went wrong.';
+        triggerToast('Something went wrong!', 'danger');
       }
     };
 
     const numberOfPages = computed(() => {
       return Math.ceil(numberOfTodos.value / limit);
     });
-
-    // 📌 숫자 값 (count)
-    const count = ref(1);
-
-    // 📌 computed 사용 - 캐싱됨
-    const doubleCountComputed = computed(() => count.value * 2);
-
-    // 📌 method 사용 - 호출될 때마다 연산 수행
-    const doubleCountMethod = () => count.value * 2;
 
     return {
       todos,
@@ -257,14 +262,17 @@ export default {
       currentPage,
       toggleTodo,
       searchText,
+      showToast,
+      toastMessage,
+      toastAlertType,
+      router,
+      moveToCreatePage,
       addTodo,
       getTodos,
       searchTodo,
       deleteTodo,
-      count,
-      doubleCountComputed,
-      doubleCountMethod,
       numberOfPages,
+      triggerToast,
     };
   },
 };
