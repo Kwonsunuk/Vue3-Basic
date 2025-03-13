@@ -1,0 +1,25 @@
+"재사용이 가능한 JS 로직을 composables에 따로 빼두어 다양한 컴포넌트에서 공통적으로 사용할 수 있도록 모듈화한다.
+
+이 폴더에는 Vue의 Composition API를 활용하여 상태 관리, 로직 분리, 코드 재사용성을 높이는 함수들을 정의한다.
+
+예를 들어:
+
+useToast.js → 토스트 메시지 관리 (성공, 에러 알림 등 UI 피드백)
+useCount.js → 숫자 증가/감소 등의 카운트 관련 로직 관리
+✅ composables의 주요 목적:
+
+반복되는 로직을 추출하여 코드 중복을 줄임
+컴포넌트 간의 상태 및 기능을 쉽게 공유 가능
+Composition API의 ref, reactive, computed, watch 등을 활용하여 상태 관리
+컴포넌트의 setup() 내에서 불러와 사용하며 유지보수가 쉬운 코드 작성
+
+📌 사용 예시 (컴포넌트에서 활용하는 방법)
+<script setup>
+import useToast from '@/composables/toast';
+import useCount from '@/composables/count';
+
+const { showToast, triggerToast } = useToast();
+const { count, increment, decrement } = useCount();
+</script>
+
+✔ 이렇게 하면 composables 폴더의 로직을 불러와 컴포넌트에서 쉽게 재사용할 수 있음. 🚀"
