@@ -19,9 +19,11 @@
         continue.</strong
       >
     </noscript>
-    <div id="app">
-      <!-- vue 어플래케이션이 구동 됨. -->
-    </div>
+    <!-- vue 어플래케이션이 구동 됨. -->
+    <div id="app"></div>
+    <!-- modal,Toast 등과 같이 항상 최상위에 위치해야하는 창의 경우 스타일이 부모 상속을 받기 때문에
+     teleport를 해주면 자식이어도 영향을 받지 않는다. -->
+    <div id="modal"></div>
     <!-- built files will be auto injected -->
   </body>
 </html>

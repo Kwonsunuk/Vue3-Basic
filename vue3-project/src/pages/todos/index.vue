@@ -39,42 +39,29 @@
       - `v-for`를 사용하여 페이지 번호를 동적으로 생성.
       - 현재 페이지와 일치하는 페이지 번호에 `active` 클래스 적용.
     -->
-    <nav aria-label="Page navigation example">
-      <ul class="pagination">
-        <li v-if="currentPage !== 1" class="page-item">
-          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage - 1)">
-            Previous
-          </a>
-        </li>
-        <li
-          v-for="page in numberOfPages"
-          :key="page"
-          class="page-item"
-          :class="currentPage === page ? 'active' : ''"
-        >
-          <a style="cursor: pointer" class="page-link" @click="getTodos(page)">{{ page }}</a>
-        </li>
-        <li v-if="numberOfPages !== currentPage" class="page-item">
-          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage + 1)">Next</a>
-        </li>
-      </ul>
-    </nav>
+    <hr />
+    <!-- 자식 컴포넌트인 Pagination.vue로부터 numberOfPages와 currentPage를 받아오며 클릭 이벤트가 발생하면 getTodos를 실행. -->
+    <Pagination
+      v-if="todos.length"
+      :numberOfPages="numberOfPages"
+      :currentPage="currentPage"
+      @update:currentPage="getTodos"
+    />
   </div>
-  <Toast v-if="showToast" :message="toastMessage" v-bind:type="toastAlertType" />
 </template>
 
 <script>
 import { ref, computed, watch } from 'vue';
-import axios from 'axios';
+import axios from '@/axios';
 import TodoList from '@/components/TodoList.vue';
-import Toast from '@/components/Toast.vue';
 import useToast from '@/composables/toast';
 import { useRouter } from 'vue-router';
+import Pagination from '@/components/Pagination.vue';
 
 export default {
   components: {
     TodoList,
-    Toast,
+    Pagination,
   },
   setup() {
     // 📌 할 일 목록 (배열)
@@ -109,7 +96,7 @@ export default {
       const { id } = todos.value[index]; // 이렇게 해야 id를 올바르게 가져옴
       console.log(id);
       try {
-        await axios.patch(`http://localhost:3000/todos/${id}`, {
+        await axios.patch(`todos/${id}`, {
           completed: checked,
         });
         todos.value[index].completed = checked;
@@ -129,7 +116,7 @@ export default {
       currentPage.value = page;
       try {
         const res = await axios.get(
-          `http://localhost:3000/todos?_sort=id&_order=desc&subject_like=${searchText.value}&_page=${page}&_limit=${limit}`
+          `todos?_sort=id&_order=desc&subject_like=${searchText.value}&_page=${page}&_limit=${limit}`
         );
 
         // x-total-count 값 가져오기
@@ -161,7 +148,7 @@ export default {
        */
       error.value = ''; // 기존 에러 초기화
       try {
-        const res = await axios.post('http://localhost:3000/todos', {
+        const res = await axios.post('todos', {
           subject: todo.subject, // 할 일 제목
           completed: todo.completed, // 완료 여부 (기본값: false)
         });
@@ -237,9 +224,7 @@ export default {
      */
     const deleteTodo = async (index) => {
       try {
-        const { id } = todos.value[index];
-        console.log(id);
-        await axios.delete(`http://localhost:3000/todos/${id}`);
+        await axios.delete(`todos/${index}`);
         todos.value.splice(index, 1);
         error.value = '';
         getTodos(1);

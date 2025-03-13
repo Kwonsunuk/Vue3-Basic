@@ -3,10 +3,8 @@
   <form v-else @submit.prevent="onSave">
     <div class="row">
       <div class="col-6">
-        <div class="form-group">
-          <label>Subject</label>
-          <input v-model="todo.subject" type="text" class="form-control" />
-        </div>
+        <!-- 📌 `subject` 값을 `todo.subject`에서 가져와 Input 컴포넌트에 전달 -->
+        <TodoInput label="Subject" v-model:subject="todo.subject" />
       </div>
       <div v-if="editing" class="col-6">
         <div class="form-group">
@@ -36,20 +34,19 @@
     </button>
     <button class="btn btn-outline-dark ml-2" @click="moveToTodoListPage">Cancel</button>
   </form>
-  <Toast v-if="showToast" :message="toastMessage" :type="toastAlertType" />
 </template>
 
 <script>
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
-import { ref, computed } from 'vue';
+import axios from '@/axios';
+import { ref, computed, onUpdated } from 'vue';
 import _ from 'lodash';
-import Toast from '@/components/Toast.vue';
 import useToast from '@/composables/toast';
+import TodoInput from '@/components/TodoInput.vue';
 
 export default {
   components: {
-    Toast,
+    TodoInput,
   },
   props: {
     editing: {
@@ -65,6 +62,9 @@ export default {
       completed: false,
       body: '',
     });
+    onUpdated(() => {
+      console.log(todo.value.subject);
+    });
     const originalTodo = ref(null);
     const loading = ref(false);
     const { toastMessage, toastAlertType, showToast, triggerToast } = useToast();
@@ -74,7 +74,7 @@ export default {
     const getTodo = async () => {
       loading.value = true;
       try {
-        const res = await axios.get(`http://localhost:3000/todos/${todoId}`);
+        const res = await axios.get(`todos/${todoId}`);
 
         todo.value = { ...res.data };
         originalTodo.value = { ...res.data };
@@ -118,16 +118,22 @@ export default {
           body: todo.value.body,
         };
         if (props.editing) {
-          res = await axios.put(`http://localhost:3000/todos/${todoId}`, data);
+          res = await axios.put(`todos/${todoId}`, data);
           originalTodo.value = { ...res.data };
         } else {
-          res = await axios.post('http://localhost:3000/todos', data);
+          res = await axios.post('todos', data);
           todo.value.subject = '';
           todo.value.body = '';
         }
 
         const message = `Successfully ${props.editing ? 'Updated!' : 'Created!'}`;
         triggerToast(message);
+
+        if (!props.editing) {
+          router.push({
+            name: 'Todos',
+          });
+        }
       } catch (error) {
         console.log(error);
         triggerToast('Something went wrong', 'danger');
@@ -149,4 +155,21 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0px);
+}
+</style>
